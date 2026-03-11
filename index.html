@@ -215,35 +215,12 @@ function EditModal({ spa, onSave, onClose }) {
   );
 }
 
-// ── PreviewModal ────────────────────────────────────────────────────
-function PreviewModal({ spa, onClose }) {
-  const [url, setUrl] = useState(null);
-  useEffect(() => {
-    const u = URL.createObjectURL(spa.blob);
-    setUrl(u);
-    return () => URL.revokeObjectURL(u);
-  }, [spa]);
-  return (
-    <div className="fixed inset-0 z-[200] flex flex-col bg-black/80 modal-backdrop">
-      <div className="flex items-center justify-between px-4 py-2 bg-[#004030] dark:bg-slate-900">
-        <div>
-          <span className="font-serif font-bold text-[#D8C3A5] text-sm">{spa.title}</span>
-          {spa.authorName && <span className="ml-3 text-[#D8C3A5]/60 text-xs">{spa.authorName}</span>}
-        </div>
-        <div className="flex gap-2">
-          {url && <a href={url} target="_blank" rel="noopener noreferrer"
-            className="flex items-center gap-1 text-xs text-[#D8C3A5]/80 hover:text-white px-3 py-1 rounded-lg border border-[#D8C3A5]/30 hover:border-[#D8C3A5] transition">
-            <IconExternalLink size={14}/> 新分頁開啟
-          </a>}
-          <button onClick={onClose} className="text-[#D8C3A5] hover:text-white p-1"><IconX size={22}/></button>
-        </div>
-      </div>
-      <div className="flex-1 bg-white">
-        {url ? <iframe src={url} className="w-full h-full border-0" title={spa.title}/> :
-          <div className="flex items-center justify-center h-full"><div className="shimmer w-full h-full"/></div>}
-      </div>
-    </div>
-  );
+// ── openInNewTab ────────────────────────────────────────────────────
+function openInNewTab(spa) {
+  const url = URL.createObjectURL(spa.blob);
+  const win = window.open(url, '_blank');
+  // Revoke after a delay to allow the new tab to load
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
 }
 
 // ── SPA Card ────────────────────────────────────────────────────────
@@ -266,7 +243,9 @@ function SPACard({ spa, view, onPreview, onEdit, onRemove }) {
       </div>
       <div className="flex gap-1 ml-2">
         <button onClick={onEdit} className="p-1.5 rounded-lg text-slate-400 hover:text-[#004030] dark:hover:text-[#D8C3A5] hover:bg-slate-100 dark:hover:bg-slate-700 transition"><IconEdit size={15}/></button>
-        <button onClick={onPreview} className="px-3 py-1 text-xs font-semibold bg-[#004030] dark:bg-[#D8C3A5] text-white dark:text-[#004030] rounded-lg hover:bg-[#002b20] dark:hover:bg-white transition">預覽</button>
+        <button onClick={()=>openInNewTab(spa)} className="flex items-center gap-1 px-3 py-1 text-xs font-semibold bg-[#004030] dark:bg-[#D8C3A5] text-white dark:text-[#004030] rounded-lg hover:bg-[#002b20] dark:hover:bg-white transition">
+          <IconExternalLink size={12}/> 開新分頁
+        </button>
       </div>
     </div>
   );
@@ -301,8 +280,8 @@ function SPACard({ spa, view, onPreview, onEdit, onRemove }) {
           <button onClick={onEdit} className="flex items-center gap-1 px-2.5 py-1.5 text-xs text-slate-500 dark:text-slate-400 hover:text-[#004030] dark:hover:text-[#D8C3A5] border border-slate-200 dark:border-slate-600 rounded-lg hover:border-[#004030] dark:hover:border-[#D8C3A5] transition">
             <IconEdit size={13}/> 編輯
           </button>
-          <button onClick={onPreview} className="flex-1 py-1.5 text-xs font-bold bg-[#004030] dark:bg-[#D8C3A5] text-white dark:text-[#004030] rounded-lg hover:bg-[#002b20] dark:hover:bg-white transition text-center">
-            開啟預覽 →
+          <button onClick={()=>openInNewTab(spa)} className="flex-1 py-1.5 text-xs font-bold bg-[#004030] dark:bg-[#D8C3A5] text-white dark:text-[#004030] rounded-lg hover:bg-[#002b20] dark:hover:bg-white transition text-center flex items-center justify-center gap-1">
+            <IconExternalLink size={12}/> 開新分頁
           </button>
         </div>
         <p className="text-[10px] text-slate-300 dark:text-slate-600 mt-2 text-right">{spa.uploadedAt}</p>
@@ -340,7 +319,6 @@ function App() {
   const [dark, setDark] = useState(false);
   const [spas, setSpas] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [previewSpa, setPreviewSpa] = useState(null);
   const [editSpa, setEditSpa] = useState(null);
   const [search, setSearch] = useState('');
   const [filterDept, setFilterDept] = useState('全部');
@@ -542,7 +520,6 @@ function App() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 animate-fade-in-delay-3">
                   {filtered.map(spa => (
                     <SPACard key={spa.id} spa={spa} view="grid"
-                      onPreview={()=>setPreviewSpa(spa)}
                       onEdit={()=>handleEdit(spa.id)}
                       onRemove={()=>handleRemove(spa.id)}/>
                   ))}
@@ -551,7 +528,6 @@ function App() {
                 <div className="flex flex-col gap-3 animate-fade-in-delay-3">
                   {filtered.map(spa => (
                     <SPACard key={spa.id} spa={spa} view="list"
-                      onPreview={()=>setPreviewSpa(spa)}
                       onEdit={()=>handleEdit(spa.id)}
                       onRemove={()=>handleRemove(spa.id)}/>
                   ))}
@@ -576,7 +552,6 @@ function App() {
       </footer>
 
       {/* Modals */}
-      {previewSpa && <PreviewModal spa={previewSpa} onClose={()=>setPreviewSpa(null)}/>}
       {editSpa && <EditModal spa={editSpa} onSave={handleSaveEdit} onClose={()=>setEditSpa(null)}/>}
     </div>
   );
