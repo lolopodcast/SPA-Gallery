@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>EMI SPA 課程成果展示牆 — NTHU EMI 工作坊</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Merriweather:ital,wght@0,400;0,700;0,900;1,400&family=Inter:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet"/>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script>
+tailwind.config = {
+  darkMode: 'class',
+  theme: {
+    extend: {
+      fontFamily: {
+        sans: ['Inter','Noto Sans TC','sans-serif'],
+        serif: ['Merriweather','serif']
+      }
+    }
+  }
+}
+</script>
+<style>
+@keyframes fadeInUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+@keyframes shimmer { 0%{background-position:-200% 0} 100%{background-position:200% 0} }
+@keyframes pulse-ring { 0%{transform:scale(1);opacity:0.8} 100%{transform:scale(1.4);opacity:0} }
+.animate-fade-in { animation: fadeInUp 0.5s ease-out forwards; }
+.animate-fade-in-delay-1 { animation: fadeInUp 0.5s ease-out 0.1s both; }
+.animate-fade-in-delay-2 { animation: fadeInUp 0.5s ease-out 0.2s both; }
+.animate-fade-in-delay-3 { animation: fadeInUp 0.5s ease-out 0.3s both; }
+.shimmer {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+.dark .shimmer {
+  background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%);
+  background-size: 200% 100%;
+}
+.card-hover { transition: transform 0.25s ease, box-shadow 0.25s ease; }
+.card-hover:hover { transform: translateY(-4px); box-shadow: 0 20px 40px rgba(0,64,48,0.15); }
+.dark .card-hover:hover { box-shadow: 0 20px 40px rgba(0,0,0,0.4); }
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+.dark ::-webkit-scrollbar-thumb { background: #475569; }
+.tag-pill {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 10px; border-radius: 999px; font-size: 0.72rem; font-weight: 600;
+  cursor: pointer; transition: all 0.2s;
+}
+.modal-backdrop { animation: fadeInUp 0.2s ease-out; }
+.drop-zone-active { border-color: #004030 !important; background: rgba(0,64,48,0.05) !important; }
+.dark .drop-zone-active { border-color: #D8C3A5 !important; background: rgba(216,195,165,0.05) !important; }
+selection:bg-\[#004030\] { background: #004030; }
+</style>
+</head>
+<body class="bg-[#f4f4f4] dark:bg-[#121212] min-h-screen selection:bg-[#004030] selection:text-white dark:selection:bg-[#D8C3A5] dark:selection:text-[#004030]">
+<script type="text/babel">
+const { useState, useEffect, useRef, useCallback, useMemo } = React;
+
+// ── Icons ──────────────────────────────────────────────────────────
+const Icon = ({d, size=20, className=""}) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24"
+    fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <path d={d}/>
+  </svg>
+);
+const IconUpload = ({size=20,className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>;
+const IconSearch = ({size=20,className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>;
+const IconX = ({size=20,className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>;
+const IconMoon = ({size=20,className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>;
+const IconSun = ({size=20,className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>;
+const IconGrid = ({size=20,className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>;
+const IconList = ({size=20,className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>;
+const IconExternalLink = ({size=16,className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>;
+const IconFilter = ({size=20,className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>;
+const IconEdit = ({size=16,className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>;
+
+// ── Tag color palette ───────────────────────────────────────────────
+const TAG_COLORS = {
+  dept: ['bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300',
+         'bg-teal-100 text-teal-800 dark:bg-teal-900/40 dark:text-teal-300'],
+  course: ['bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300',
+           'bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300'],
+  spec: ['bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300',
+         'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-300'],
+  lang: ['bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-300'],
+};
+const tagColor = (type, idx=0) => (TAG_COLORS[type] || TAG_COLORS.spec)[idx % (TAG_COLORS[type]||TAG_COLORS.spec).length];
+
+// ── HTML Parser ─────────────────────────────────────────────────────
+function parseHTML(htmlStr, filename) {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(htmlStr, 'text/html');
+
+  // title
+  const title = doc.querySelector('title')?.textContent?.trim() || filename.replace('.html','');
+
+  // Try to extract dict from script tags
+  let dictZh = {}, dictEn = {};
+  const scripts = doc.querySelectorAll('script[type="text/babel"], script:not([src])');
+  let rawScript = '';
+  scripts.forEach(s => { rawScript += s.textContent + '\n'; });
+
+  // Extract subtitle / intro from dict
+  const extractStr = (key) => {
+    const m = rawScript.match(new RegExp(`['"]${key}['"]\\s*:\\s*['"\`]([^'"\`]{1,200})`));
+    return m ? m[1].trim() : '';
+  };
+
+  const zhTitle = extractStr('title') || title;
+  const zhSubtitle = extractStr('subtitle') || extractStr('m0_intro') || '';
+
+  // Detect language support
+  const hasBilingual = rawScript.includes("lang==='zh'") || rawScript.includes('dict.zh') || rawScript.includes("dict['zh']");
+  const langTag = hasBilingual ? '中英雙語' : (rawScript.includes('zh') ? '中文' : '英文');
+
+  // Detect modules count
+  const moduleMatches = rawScript.match(/m\d+_nav/g) || [];
+  const moduleCount = Math.max(new Set(moduleMatches).size, 1);
+
+  // Detect features
+  const hasAnalytics = rawScript.includes('analytics') || rawScript.includes('Analytics');
+  const hasQuiz = rawScript.includes('ModuleQuiz') || rawScript.includes('quiz');
+  const hasFlipCard = rawScript.includes('FlipCard') || rawScript.includes('flip');
+  const hasTTS = rawScript.includes('speechSynthesis') || rawScript.includes('TTS');
+  const hasDark = rawScript.includes('darkMode') || rawScript.includes('dark:');
+
+  // Try to infer dept/course from filename or content
+  const deptMatch = filename.match(/([A-Z]{2,6})\d/) || zhTitle.match(/(工|理|文|商|管|社|法|醫|教|資|電|機|化|生)/);
+  const dept = deptMatch ? deptMatch[1] : '未分類';
+
+  // Spec tags
+  const specs = [];
+  if (hasAnalytics) specs.push('Learning Analytics');
+  if (hasQuiz) specs.push('測驗');
+  if (hasFlipCard) specs.push('翻轉卡');
+  if (hasTTS) specs.push('語音導覽');
+  if (hasDark) specs.push('深色模式');
+
+  // Infer course category from title keywords
+  let courseCategory = '其他';
+  const titleLower = (zhTitle + zhSubtitle).toLowerCase();
+  if (titleLower.match(/business|管理|商業|行銷|marketing|finance|財務/)) courseCategory = '商管';
+  else if (titleLower.match(/engineer|工程|程式|coding|software|系統/)) courseCategory = '工程資訊';
+  else if (titleLower.match(/science|科學|化學|物理|生物|biology|chemistry/)) courseCategory = '自然科學';
+  else if (titleLower.match(/english|emi|language|語言|writing|communication/)) courseCategory = '語言';
+  else if (titleLower.match(/social|社會|政治|法律|history|歷史|文化/)) courseCategory = '人文社科';
+  else if (titleLower.match(/ai|machine|learn|深度|neural|模型/)) courseCategory = 'AI/數位';
+
+  return {
+    id: Date.now() + Math.random(),
+    filename,
+    title: zhTitle,
+    subtitle: zhSubtitle.slice(0, 80) + (zhSubtitle.length > 80 ? '…' : ''),
+    dept,
+    courseCategory,
+    langTag,
+    moduleCount,
+    specs,
+    hasBilingual,
+    hasAnalytics,
+    hasQuiz,
+    hasTTS,
+    blob: new Blob([htmlStr], {type:'text/html'}),
+    blobUrl: null,
+    uploadedAt: new Date().toLocaleString('zh-TW'),
+    // editable fields
+    deptLabel: dept,
+    courseCategoryLabel: courseCategory,
+    authorName: '',
+    note: '',
+  };
+}
+
+// ── EditModal ───────────────────────────────────────────────────────
+function EditModal({ spa, onSave, onClose }) {
+  const [form, setForm] = useState({
+    deptLabel: spa.deptLabel || '',
+    courseCategoryLabel: spa.courseCategoryLabel || '',
+    authorName: spa.authorName || '',
+    note: spa.note || '',
+  });
+  const set = (k,v) => setForm(f=>({...f,[k]:v}));
+  return (
+    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 modal-backdrop" onClick={onClose}>
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md p-6 animate-fade-in" onClick={e=>e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-5">
+          <h3 className="font-serif font-bold text-[#004030] dark:text-[#D8C3A5] text-lg">編輯標籤資訊</h3>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"><IconX size={20}/></button>
+        </div>
+        <div className="space-y-4">
+          {[
+            {label:'院系別', key:'deptLabel', ph:'例：國企系、電機系…'},
+            {label:'課程類別', key:'courseCategoryLabel', ph:'例：商管、AI/數位、語言…'},
+            {label:'教師姓名', key:'authorName', ph:'例：王大明 教授'},
+            {label:'備註說明', key:'note', ph:'選填，簡短描述此課程特色'},
+          ].map(({label,key,ph}) => (
+            <div key={key}>
+              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">{label}</label>
+              <input value={form[key]} onChange={e=>set(key,e.target.value)} placeholder={ph}
+                className="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-[#004030] dark:focus:ring-[#D8C3A5]"/>
+            </div>
+          ))}
+        </div>
+        <div className="flex gap-3 mt-6">
+          <button onClick={onClose} className="flex-1 py-2 rounded-lg border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 text-sm font-semibold hover:bg-slate-50 dark:hover:bg-slate-700 transition">取消</button>
+          <button onClick={()=>onSave(form)} className="flex-1 py-2 rounded-lg bg-[#004030] dark:bg-[#D8C3A5] text-white dark:text-[#004030] text-sm font-semibold hover:bg-[#002b20] dark:hover:bg-white transition">儲存</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── PreviewModal ────────────────────────────────────────────────────
+function PreviewModal({ spa, onClose }) {
+  const [url, setUrl] = useState(null);
+  useEffect(() => {
+    const u = URL.createObjectURL(spa.blob);
+    setUrl(u);
+    return () => URL.revokeObjectURL(u);
+  }, [spa]);
+  return (
+    <div className="fixed inset-0 z-[200] flex flex-col bg-black/80 modal-backdrop">
+      <div className="flex items-center justify-between px-4 py-2 bg-[#004030] dark:bg-slate-900">
+        <div>
+          <span className="font-serif font-bold text-[#D8C3A5] text-sm">{spa.title}</span>
+          {spa.authorName && <span className="ml-3 text-[#D8C3A5]/60 text-xs">{spa.authorName}</span>}
+        </div>
+        <div className="flex gap-2">
+          {url && <a href={url} target="_blank" rel="noopener noreferrer"
+            className="flex items-center gap-1 text-xs text-[#D8C3A5]/80 hover:text-white px-3 py-1 rounded-lg border border-[#D8C3A5]/30 hover:border-[#D8C3A5] transition">
+            <IconExternalLink size={14}/> 新分頁開啟
+          </a>}
+          <button onClick={onClose} className="text-[#D8C3A5] hover:text-white p-1"><IconX size={22}/></button>
+        </div>
+      </div>
+      <div className="flex-1 bg-white">
+        {url ? <iframe src={url} className="w-full h-full border-0" title={spa.title}/> :
+          <div className="flex items-center justify-center h-full"><div className="shimmer w-full h-full"/></div>}
+      </div>
+    </div>
+  );
+}
+
+// ── SPA Card ────────────────────────────────────────────────────────
+function SPACard({ spa, view, onPreview, onEdit, onRemove }) {
+  const specs = spa.specs.slice(0,3);
+  if (view === 'list') return (
+    <div className="card-hover bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 flex items-center gap-4 px-5 py-4 animate-fade-in">
+      <div className="w-10 h-10 rounded-lg bg-[#004030]/10 dark:bg-[#D8C3A5]/10 flex items-center justify-center shrink-0">
+        <span className="font-serif font-black text-[#004030] dark:text-[#D8C3A5] text-lg">
+          {(spa.title||'?')[0]}
+        </span>
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="font-serif font-bold text-slate-800 dark:text-slate-100 text-sm truncate">{spa.title}</p>
+        <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{spa.authorName || spa.filename}</p>
+      </div>
+      <div className="flex gap-1.5 flex-wrap justify-end">
+        <span className={`tag-pill ${tagColor('dept')}`}>{spa.deptLabel||'未分類'}</span>
+        <span className={`tag-pill ${tagColor('course')}`}>{spa.courseCategoryLabel||'其他'}</span>
+      </div>
+      <div className="flex gap-1 ml-2">
+        <button onClick={onEdit} className="p-1.5 rounded-lg text-slate-400 hover:text-[#004030] dark:hover:text-[#D8C3A5] hover:bg-slate-100 dark:hover:bg-slate-700 transition"><IconEdit size={15}/></button>
+        <button onClick={onPreview} className="px-3 py-1 text-xs font-semibold bg-[#004030] dark:bg-[#D8C3A5] text-white dark:text-[#004030] rounded-lg hover:bg-[#002b20] dark:hover:bg-white transition">預覽</button>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="card-hover bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden flex flex-col animate-fade-in">
+      {/* Thumbnail area */}
+      <div className="h-32 bg-gradient-to-br from-[#004030] to-[#006050] relative overflow-hidden flex items-center justify-center">
+        <div className="absolute inset-0 opacity-10" style={{backgroundImage:'radial-gradient(circle at 30% 50%, #D8C3A5 1px, transparent 1px), radial-gradient(circle at 70% 80%, #D8C3A5 1px, transparent 1px)', backgroundSize:'30px 30px'}}/>
+        <span className="font-serif font-black text-[#D8C3A5] text-5xl opacity-30 select-none">{(spa.title||'?')[0]}</span>
+        <div className="absolute top-3 right-3 flex gap-1">
+          {spa.hasBilingual && <span className="tag-pill bg-white/20 text-white">雙語</span>}
+          {spa.hasAnalytics && <span className="tag-pill bg-white/20 text-white">Analytics</span>}
+        </div>
+        <div className="absolute bottom-3 left-3">
+          <span className="text-[#D8C3A5]/70 text-xs">{spa.moduleCount} 個模組</span>
+        </div>
+      </div>
+      {/* Content */}
+      <div className="p-4 flex flex-col flex-1">
+        <h3 className="font-serif font-bold text-slate-800 dark:text-slate-100 text-sm leading-snug line-clamp-2 mb-1">{spa.title}</h3>
+        {spa.authorName && <p className="text-xs text-[#004030] dark:text-[#D8C3A5] font-semibold mb-1">{spa.authorName}</p>}
+        {spa.subtitle && <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 mb-3 flex-1">{spa.subtitle}</p>}
+        {/* Tags */}
+        <div className="flex flex-wrap gap-1 mb-3">
+          <span className={`tag-pill ${tagColor('dept')}`}>{spa.deptLabel||'未分類'}</span>
+          <span className={`tag-pill ${tagColor('course')}`}>{spa.courseCategoryLabel||'其他'}</span>
+          {specs.map((s,i) => <span key={i} className={`tag-pill ${tagColor('spec',i)}`}>{s}</span>)}
+        </div>
+        {/* Actions */}
+        <div className="flex gap-2 mt-auto">
+          <button onClick={onEdit} className="flex items-center gap-1 px-2.5 py-1.5 text-xs text-slate-500 dark:text-slate-400 hover:text-[#004030] dark:hover:text-[#D8C3A5] border border-slate-200 dark:border-slate-600 rounded-lg hover:border-[#004030] dark:hover:border-[#D8C3A5] transition">
+            <IconEdit size={13}/> 編輯
+          </button>
+          <button onClick={onPreview} className="flex-1 py-1.5 text-xs font-bold bg-[#004030] dark:bg-[#D8C3A5] text-white dark:text-[#004030] rounded-lg hover:bg-[#002b20] dark:hover:bg-white transition text-center">
+            開啟預覽 →
+          </button>
+        </div>
+        <p className="text-[10px] text-slate-300 dark:text-slate-600 mt-2 text-right">{spa.uploadedAt}</p>
+      </div>
+    </div>
+  );
+}
+
+// ── Drop Zone ───────────────────────────────────────────────────────
+function DropZone({ onFiles }) {
+  const [dragging, setDragging] = useState(false);
+  const inputRef = useRef();
+  const handleDrop = e => {
+    e.preventDefault(); setDragging(false);
+    const files = Array.from(e.dataTransfer.files).filter(f=>f.name.endsWith('.html'));
+    if (files.length) onFiles(files);
+  };
+  return (
+    <div onDragOver={e=>{e.preventDefault();setDragging(true)}} onDragLeave={()=>setDragging(false)} onDrop={handleDrop}
+      className={`border-2 border-dashed rounded-2xl p-10 text-center transition-all cursor-pointer
+        ${dragging ? 'drop-zone-active' : 'border-slate-200 dark:border-slate-700 hover:border-[#004030]/40 dark:hover:border-[#D8C3A5]/40'}
+        bg-white dark:bg-slate-800`}
+      onClick={()=>inputRef.current?.click()}>
+      <input ref={inputRef} type="file" accept=".html" multiple className="hidden" onChange={e=>onFiles(Array.from(e.target.files))}/>
+      <IconUpload size={40} className="mx-auto mb-4 text-[#004030]/30 dark:text-[#D8C3A5]/30"/>
+      <p className="font-serif font-bold text-slate-600 dark:text-slate-300 text-lg mb-1">拖放 HTML 檔案至此</p>
+      <p className="text-sm text-slate-400 dark:text-slate-500">或點擊選擇檔案 · 支援多檔同時上傳</p>
+      <p className="text-xs text-slate-300 dark:text-slate-600 mt-3">系統將自動解析標題、模組數、功能規格等資訊</p>
+    </div>
+  );
+}
+
+// ── Main App ────────────────────────────────────────────────────────
+function App() {
+  const [dark, setDark] = useState(false);
+  const [spas, setSpas] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [previewSpa, setPreviewSpa] = useState(null);
+  const [editSpa, setEditSpa] = useState(null);
+  const [search, setSearch] = useState('');
+  const [filterDept, setFilterDept] = useState('全部');
+  const [filterCourse, setFilterCourse] = useState('全部');
+  const [filterSpec, setFilterSpec] = useState('全部');
+  const [viewMode, setViewMode] = useState('grid');
+  const [showUpload, setShowUpload] = useState(true);
+  const [lang, setLang] = useState('zh');
+
+  const t = {
+    zh: {
+      title: 'EMI SPA 成果展示牆',
+      subtitle: 'NTHU EMI 教師增能工作坊 · 2026 年 4 月',
+      upload: '上傳更多課程 SPA',
+      search_ph: '搜尋課程名稱、教師、院系…',
+      all: '全部',
+      dept_label: '院系別',
+      course_label: '課程類別',
+      spec_label: 'SPA 規格',
+      count: (n) => `共 ${n} 個課程`,
+      empty: '尚無符合條件的課程',
+      empty_sub: '請調整篩選條件，或上傳新的 SPA 檔案',
+      start: '開始上傳第一個課程 SPA',
+    },
+    en: {
+      title: 'EMI SPA Course Gallery',
+      subtitle: 'NTHU EMI Faculty Workshop · April 2026',
+      upload: 'Upload More SPA Files',
+      search_ph: 'Search by title, instructor, department…',
+      all: 'All',
+      dept_label: 'Department',
+      course_label: 'Category',
+      spec_label: 'SPA Spec',
+      count: (n) => `${n} courses`,
+      empty: 'No matching courses',
+      empty_sub: 'Try adjusting your filters or upload new SPA files',
+      start: 'Upload your first SPA file to get started',
+    }
+  }[lang];
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', dark);
+  }, [dark]);
+
+  const handleFiles = useCallback(async (files) => {
+    setLoading(true);
+    const results = [];
+    for (const file of files) {
+      const text = await file.text();
+      const meta = parseHTML(text, file.name);
+      results.push(meta);
+    }
+    setSpas(prev => [...prev, ...results]);
+    setLoading(false);
+    setShowUpload(false);
+  }, []);
+
+  // Derived filter options
+  const allDepts = useMemo(() => ['全部', ...new Set(spas.map(s=>s.deptLabel||'未分類'))], [spas]);
+  const allCourses = useMemo(() => ['全部', ...new Set(spas.map(s=>s.courseCategoryLabel||'其他'))], [spas]);
+  const allSpecs = useMemo(() => ['全部', ...new Set(spas.flatMap(s=>s.specs))], [spas]);
+
+  const filtered = useMemo(() => spas.filter(s => {
+    const q = search.toLowerCase();
+    const matchSearch = !q || s.title.toLowerCase().includes(q) || s.authorName.toLowerCase().includes(q) || (s.deptLabel||'').toLowerCase().includes(q);
+    const matchDept = filterDept==='全部' || s.deptLabel===filterDept;
+    const matchCourse = filterCourse==='全部' || s.courseCategoryLabel===filterCourse;
+    const matchSpec = filterSpec==='全部' || s.specs.includes(filterSpec);
+    return matchSearch && matchDept && matchCourse && matchSpec;
+  }), [spas, search, filterDept, filterCourse, filterSpec]);
+
+  const handleEdit = (id) => setEditSpa(spas.find(s=>s.id===id));
+  const handleSaveEdit = (form) => {
+    setSpas(prev => prev.map(s => s.id===editSpa.id ? {...s,...form} : s));
+    setEditSpa(null);
+  };
+  const handleRemove = (id) => setSpas(prev => prev.filter(s=>s.id!==id));
+
+  const FilterSelect = ({label, value, onChange, options}) => (
+    <div className="flex flex-col gap-1">
+      <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">{label}</label>
+      <select value={value} onChange={e=>onChange(e.target.value)}
+        className="text-sm border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-1.5 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-[#004030] dark:focus:ring-[#D8C3A5] cursor-pointer">
+        {options.map(o=><option key={o}>{o}</option>)}
+      </select>
+    </div>
+  );
+
+  return (
+    <div className="min-h-screen flex flex-col font-sans">
+      {/* Header */}
+      <header className="fixed top-0 left-0 right-0 z-50 h-16 bg-[#004030] dark:bg-slate-900 flex items-center justify-between px-4 md:px-8 shadow-lg">
+        <div className="flex items-center gap-3">
+          <span className="font-serif font-black text-[#D8C3A5] text-xl tracking-widest">EMI</span>
+          <span className="hidden sm:block text-[#D8C3A5]/50 text-xs font-light tracking-wider">SPA Gallery</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <button onClick={()=>setLang(l=>l==='zh'?'en':'zh')}
+            className="text-xs font-bold text-[#D8C3A5]/70 hover:text-[#D8C3A5] px-2 py-1 rounded border border-[#D8C3A5]/20 hover:border-[#D8C3A5]/50 transition">
+            {lang==='zh'?'EN':'中'}
+          </button>
+          <button onClick={()=>setDark(d=>!d)} className="p-2 rounded-lg text-[#D8C3A5]/70 hover:text-[#D8C3A5] hover:bg-white/10 transition">
+            {dark ? <IconSun size={18}/> : <IconMoon size={18}/>}
+          </button>
+          {spas.length > 0 && (
+            <button onClick={()=>setShowUpload(u=>!u)}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold bg-[#D8C3A5] text-[#004030] rounded-lg hover:bg-white transition">
+              <IconUpload size={14}/> {t.upload}
+            </button>
+          )}
+        </div>
+      </header>
+
+      <main className="pt-16 flex-1">
+        {/* Hero */}
+        <div className="bg-gradient-to-b from-[#004030] to-[#004030]/80 dark:from-slate-900 dark:to-slate-900 px-4 md:px-8 pt-10 pb-8">
+          <div className="max-w-5xl mx-auto animate-fade-in">
+            <p className="text-[#D8C3A5]/60 text-xs font-semibold uppercase tracking-widest mb-2">NTHU EMI · 2026.04.23</p>
+            <h1 className="font-serif font-black text-[#D8C3A5] text-3xl md:text-4xl mb-2">{t.title}</h1>
+            <p className="text-[#D8C3A5]/70 text-sm">{t.subtitle}</p>
+            {spas.length > 0 && (
+              <div className="flex gap-4 mt-4">
+                {[
+                  {val: spas.length, label: lang==='zh'?'課程 SPA':'Course SPAs'},
+                  {val: new Set(spas.map(s=>s.deptLabel)).size, label: lang==='zh'?'院系別':'Departments'},
+                  {val: new Set(spas.map(s=>s.courseCategoryLabel)).size, label: lang==='zh'?'課程類別':'Categories'},
+                ].map((stat,i) => (
+                  <div key={i} className="bg-white/10 rounded-xl px-4 py-2 text-center">
+                    <p className="font-serif font-black text-[#D8C3A5] text-2xl">{stat.val}</p>
+                    <p className="text-[#D8C3A5]/60 text-xs">{stat.label}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="max-w-5xl mx-auto px-4 md:px-8 py-8">
+          {/* Upload area */}
+          {(showUpload || spas.length === 0) && (
+            <div className="mb-8 animate-fade-in">
+              <DropZone onFiles={handleFiles}/>
+              {spas.length === 0 && (
+                <p className="text-center text-slate-400 dark:text-slate-500 text-sm mt-4">{t.start}</p>
+              )}
+            </div>
+          )}
+
+          {loading && (
+            <div className="flex items-center justify-center gap-3 py-8 text-[#004030] dark:text-[#D8C3A5]">
+              <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin"/>
+              <span className="text-sm font-semibold">解析中…</span>
+            </div>
+          )}
+
+          {spas.length > 0 && (
+            <>
+              {/* Filters */}
+              <div className="flex flex-wrap gap-4 items-end mb-6 animate-fade-in-delay-1">
+                <div className="flex-1 min-w-[200px]">
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 block mb-1">{lang==='zh'?'搜尋':'Search'}</label>
+                  <div className="relative">
+                    <IconSearch size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"/>
+                    <input value={search} onChange={e=>setSearch(e.target.value)} placeholder={t.search_ph}
+                      className="w-full pl-9 pr-3 py-1.5 text-sm border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-[#004030] dark:focus:ring-[#D8C3A5]"/>
+                  </div>
+                </div>
+                <FilterSelect label={t.dept_label} value={filterDept} onChange={setFilterDept} options={allDepts}/>
+                <FilterSelect label={t.course_label} value={filterCourse} onChange={setFilterCourse} options={allCourses}/>
+                <FilterSelect label={t.spec_label} value={filterSpec} onChange={setFilterSpec} options={allSpecs}/>
+                <div className="flex gap-1 items-end pb-0.5">
+                  {['grid','list'].map(m => (
+                    <button key={m} onClick={()=>setViewMode(m)}
+                      className={`p-2 rounded-lg transition ${viewMode===m ? 'bg-[#004030] dark:bg-[#D8C3A5] text-white dark:text-[#004030]' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 border border-slate-200 dark:border-slate-600'}`}>
+                      {m==='grid' ? <IconGrid size={16}/> : <IconList size={16}/>}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Count */}
+              <div className="flex items-center justify-between mb-4 animate-fade-in-delay-2">
+                <p className="text-sm text-slate-500 dark:text-slate-400 font-semibold">{t.count(filtered.length)}</p>
+                {(filterDept!=='全部'||filterCourse!=='全部'||filterSpec!=='全部'||search) && (
+                  <button onClick={()=>{setFilterDept('全部');setFilterCourse('全部');setFilterSpec('全部');setSearch('');}}
+                    className="text-xs text-[#004030] dark:text-[#D8C3A5] font-semibold hover:underline flex items-center gap-1">
+                    <IconX size={12}/> 清除篩選
+                  </button>
+                )}
+              </div>
+
+              {/* Grid / List */}
+              {filtered.length === 0 ? (
+                <div className="text-center py-20 animate-fade-in">
+                  <p className="font-serif font-bold text-slate-400 dark:text-slate-500 text-xl mb-2">{t.empty}</p>
+                  <p className="text-slate-300 dark:text-slate-600 text-sm">{t.empty_sub}</p>
+                </div>
+              ) : viewMode === 'grid' ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 animate-fade-in-delay-3">
+                  {filtered.map(spa => (
+                    <SPACard key={spa.id} spa={spa} view="grid"
+                      onPreview={()=>setPreviewSpa(spa)}
+                      onEdit={()=>handleEdit(spa.id)}
+                      onRemove={()=>handleRemove(spa.id)}/>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-col gap-3 animate-fade-in-delay-3">
+                  {filtered.map(spa => (
+                    <SPACard key={spa.id} spa={spa} view="list"
+                      onPreview={()=>setPreviewSpa(spa)}
+                      onEdit={()=>handleEdit(spa.id)}
+                      onRemove={()=>handleRemove(spa.id)}/>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </main>
+
+      {/* Footer */}
+      <footer className="h-8 bg-[#004030] flex items-center justify-between px-4 shrink-0">
+        <span className="text-[#D8C3A5]/60 text-xs">Version 2026.04.23 · For Educational Use Only</span>
+        <span className="text-[#D8C3A5]/60 text-xs flex items-center gap-1">
+          Architect:&nbsp;
+          <a href="https://www.ibs.ncnu.edu.tw/index.php/faculty/tenured-professor/299-smlo"
+            target="_blank" rel="noopener noreferrer"
+            className="text-[#D8C3A5] hover:text-white underline underline-offset-2 transition-colors">
+            Prof. Shihmin Lo
+          </a>
+        </span>
+      </footer>
+
+      {/* Modals */}
+      {previewSpa && <PreviewModal spa={previewSpa} onClose={()=>setPreviewSpa(null)}/>}
+      {editSpa && <EditModal spa={editSpa} onSave={handleSaveEdit} onClose={()=>setEditSpa(null)}/>}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+<div id="root"></div>
+</body>
+</html>
